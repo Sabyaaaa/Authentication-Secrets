@@ -12,12 +12,11 @@ const findOrCreate = require('mongoose-findorcreate');
 
 const app = express();
 
+app.use(express.static("public"));
 app.set('view engine', 'ejs');
-
 app.use(bodyParser.urlencoded({
     extended: true
 }));
-app.use(express.static("public"));
 
 app.use(session({
     secret: "Our little secret.",
@@ -28,10 +27,9 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-mongoose.connect("mongodb://localhost:27017/userDB", { useNewUrlParser: true, useUnifiedTopology: true });
+mongoose.connect("mongodb://localhost:27017/userDB", { useNewUrlParser: true, useUnifiedTopology: true});
 mongoose.set("useCreateIndex", true);
 
-//////Encrypted mmongoose schema//////
 const userSchema = new mongoose.Schema({
     email: String,
     password: String,
@@ -56,7 +54,6 @@ passport.deserializeUser(function (id, done) {
     });
 });
 
-
 passport.use(new GoogleStrategy({
     clientID: process.env.CLIENT_ID,
     clientSecret: process.env.CLIENT_SECRET,
@@ -65,6 +62,7 @@ passport.use(new GoogleStrategy({
 },
     function (accessToken, refreshToken, profile, cb) {
         console.log(profile);
+
         User.findOrCreate({ googleId: profile.id }, function (err, user) {
             return cb(err, user);
         });
@@ -76,13 +74,13 @@ app.get("/", function (req, res) {
 });
 
 app.get("/auth/google",
-    passport.authenticate("google", { scope: ["profile"] })
+    passport.authenticate('google', { scope: ["profile"] })
 );
 
 app.get("/auth/google/secrets",
-    passport.authenticate("google", { failureRedirect: "/login" }),
+    passport.authenticate('google', { failureRedirect: "/login" }),
     function (req, res) {
-        // Successful authentication, redirect home.
+        // Successful authentication, redirect to secrets.
         res.redirect("/secrets");
     });
 
@@ -100,10 +98,9 @@ app.get("/secrets", function (req, res) {
             console.log(err);
         } else {
             if (foundUsers) {
-                res.render("secrets", { usersWithSecrets: foundUsers })
+                res.render("secrets", { usersWithSecrets: foundUsers });
             }
         }
-
     });
 });
 
@@ -118,7 +115,8 @@ app.get("/submit", function (req, res) {
 app.post("/submit", function (req, res) {
     const submittedSecret = req.body.secret;
 
-    console.log(req.user.id);
+    //Once the user is authenticated and their session gets saved, their user details are saved to req.user.
+    // console.log(req.user.id);
 
     User.findById(req.user.id, function (err, foundUser) {
         if (err) {
@@ -132,13 +130,12 @@ app.post("/submit", function (req, res) {
             }
         }
     });
-
 });
 
 app.get("/logout", function (req, res) {
     req.logout();
     res.redirect("/");
-})
+});
 
 app.post("/register", function (req, res) {
 
@@ -159,7 +156,7 @@ app.post("/login", function (req, res) {
 
     const user = new User({
         username: req.body.username,
-        passowrd: req.body.password
+        password: req.body.password
     });
 
     req.login(user, function (err) {
@@ -171,8 +168,9 @@ app.post("/login", function (req, res) {
             });
         }
     });
+
 });
 
 app.listen(3000, function () {
-    console.log("Server started on port 3000");
+    console.log("Server started on port 3000.");
 });
